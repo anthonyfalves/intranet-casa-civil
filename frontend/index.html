@@ -78,11 +78,10 @@
     // Arrays de fallback caso o backend /api/links não esteja rodando
     const fallbackLinks = {
       quickLinks: [
-        { id: "casa-civil", title: "Site CASA CIVIL", desc: "Institucional", icon: "home", href: "https://www.google.com" },
+        { id: "casa-civil", title: "Site CASA CIVIL", desc: "Institucional", icon: "home", href: "https://www.casacivil.mt.gov.br/a-secretaria" },
         { id: "ajuda", title: "Ajuda", desc: "Sistema de Helpdesk", icon: "help", href: "https://atendimento.casacivil.mt.gov.br" },
-        { id: "ramal", title: "Ramal", desc: "Sistema de ramais", icon: "phone", href: "https://www.casacivil.mt.gov.br/inicio" },
-        { id: "capacitacoes", title: "Capacitacoes Corporativa", desc: "Capacitacoes para os servidores publicos da Casa Civil", icon: "chip", href: "https://casacivil.intranet.mt.gov.br" },
-        { id: "works", title: "Works", desc: "Gestao de comunicacao e marketing", icon: "chat", href: "https://exemplo.com/works" },
+        { id: "Contatos", title: "Contatos", desc: "Contatos do Governo de Mato Grosso", icon: "phone", href: "https://www.secom.mt.gov.br/contatos" },
+        { id: "capacitacoes", title: "Capacitacoes Corporativa", desc: "Capacitacoes para os servidores pÚblicos da Casa Civil", icon: "chip", href: "https://casacivil.intranet.mt.gov.br" },
         { id: "obras", title: "Obras do Governo", desc: "Controle de obras", icon: "building", href: "https://tv.mt.gov.br" }
       ],
       corporateSystems: [
@@ -91,9 +90,8 @@
         { id: "fiplan", title: "FIPLAN", href: "https://www.fiplan.mt.gov.br/Fiplan.jsp", checkUrl: "https://www.fiplan.mt.gov.br/favicon.ico" },
         { id: "seap", title: "SEAP", href: "https://seapng.seplag.mt.gov.br/", checkUrl: "https://seapng.seplag.mt.gov.br/favicon.ico" },
         { id: "sigpas", title: "SIGPAS", href: "https://sigpas.seplag.mt.gov.br", checkUrl: "https://sigpas.seplag.mt.gov.br/favicon.ico" },
-        { id: "sigpat", title: "SIGPAT", href: "#", checkUrl: "" },
-        { id: "compras-publicas", title: "Compras Publicas", href: "https://aquisicoes.seplag.mt.gov.br", checkUrl: "https://aquisicoes.seplag.mt.gov.br/favicon.ico" },
-        { id: "legislacao", title: "Legislacao", href: "#", checkUrl: "" }
+        { id: "compras-publicas", title: "Compras Publicas", href: "https://aquisicoes.seplag.mt.gov.br/auth/realms/az/protocol/openid-connect/auth?client_id=compras-preparacao-app&redirect_uri=https%3A%2F%2Faquisicoes.seplag.mt.gov.br%2Fcompras-preparacao%2F%23%2F&state=6b2f3dfe-08f7-4cd9-80f2-a598f59e9992&response_mode=fragment&response_type=code&scope=openid&nonce=9caa18d4-8a4e-4455-a86e-854945f3b036", checkUrl: "https://aquisicoes.seplag.mt.gov.br/auth/realms/az/protocol/openid-connect/auth?client_id=compras-preparacao-app&redirect_uri=https%3A%2F%2Faquisicoes.seplag.mt.gov.br%2Fcompras-preparacao%2F%23%2F&state=6b2f3dfe-08f7-4cd9-80f2-a598f59e9992&response_mode=fragment&response_type=code&scope=openid&nonce=9caa18d4-8a4e-4455-a86e-854945f3b036/favicon.ico" },
+        { id: "portal-aquisicao", title: "Portal de Aquisições", href: "https://aquisicoes.seplag.mt.gov.br", checkUrl: "https://aquisicoes.seplag.mt.gov.br" }
       ]
     };
 
@@ -140,13 +138,13 @@
         // filtra apenas os ids renderizados
         const filtered = {};
         ids.forEach((id) => {
-          filtered[id] = data[id] || "unknown";
+          filtered[id] = data[id] || "offline";
         });
         return filtered;
       } catch {
-        // falhou: assume unknown para n├ú for├ºar vermelho
+        // falhou: assume offline para evidenciar indisponibilidade
         const fallback = {};
-        ids.forEach((id) => (fallback[id] = "unknown"));
+        ids.forEach((id) => (fallback[id] = "offline"));
         return fallback;
       }
     }
@@ -154,7 +152,7 @@
     function applyStatus(elements, data) {
       elements.forEach((el) => {
         const id = el.dataset.id;
-        const status = data[id] || "unknown";
+        const status = data[id] || "offline";
         el.classList.remove("status-online", "status-offline", "status-unknown");
         el.classList.add(
           status === "online" ? "status-online" :
@@ -210,7 +208,7 @@
         link.href = item.href;
         link.textContent = item.title;
         link.dataset.id = item.id;
-        link.classList.add("status-unknown");
+        link.classList.add("status-offline");
         corporateContainer.appendChild(link);
       });
     }

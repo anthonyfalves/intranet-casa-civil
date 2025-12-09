@@ -27,11 +27,16 @@ async function fetchHealthUrl(url, timeout = HEALTH_TIMEOUT) {
   try {
     const res = await fetch(url, {
       method: "GET",
-      headers: { Accept: "application/json,text/plain" },
+      headers: {
+        // user-agent mais próximo de browser para evitar bloqueios simples
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+        Accept: "text/html,application/json;q=0.9,*/*;q=0.8"
+      },
+      redirect: "follow",
       signal: controller.signal
     });
-    // Qualquer 2xx já conta como online (não exige corpo especial)
-    if (res.ok) return true;
+    // Considera online se resposta < 500 (inclui 3xx/4xx comuns como 403/401)
+    if (res.status < 500) return true;
     return false;
   } catch {
     // Falha de rede/timeout = inconclusivo
