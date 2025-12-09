@@ -36,11 +36,14 @@ async function fetchHealthUrl(url, timeout = HEALTH_TIMEOUT) {
     const contentType = res.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
       const json = await res.json().catch(() => null);
-      return json && (json.status === "ok" || json.healthy === true);
+      return json && (json.status === "ok" || json.healthy === true) ? true : false;
     }
 
     const text = (await res.text()).trim().toLowerCase();
     return text === "ok" || text === "healthy" || text.includes("status: ok");
+  } catch {
+    // falha de rede/timeout = inconclusivo
+    return null;
   } finally {
     clearTimeout(id);
   }
@@ -52,7 +55,7 @@ async function checkTargets(targets) {
   for (const item of targets) {
     const url = item.checkUrl || item.href;
     if (!url || url === "#") {
-      statuses[item.id] = "offline";
+      statuses[item.id] = "unknown";
       continue;
     }
     const cached = healthCache.get(item.id);
@@ -61,7 +64,7 @@ async function checkTargets(targets) {
       continue;
     }
     const ok = await fetchHealthUrl(url);
-    const status = ok ? "online" : "offline";
+    const status = ok === true ? "online" : ok === false ? "offline" : "unknown";
     healthCache.set(item.id, { status, ts: now });
     statuses[item.id] = status;
   }

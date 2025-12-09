@@ -343,6 +343,9 @@ a:hover {
   background: #fff;
   border: 1px solid var(--border);
   font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: #111827;
   text-align: center;
   transition: all 0.2s ease;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
@@ -384,19 +387,19 @@ a:hover {
 .status-unknown {
   background: #f3f4f6;
   border-color: #e5e7eb;
-  color: #1f2937;
+  color: #111827 !important;
 }
 
 .status-online {
   background: #16a34a;
   border-color: #12833e;
-  color: #0b2812;
+  color: #ffffff !important;
 }
 
 .status-offline {
   background: #ef4444;
   border-color: #d43636;
-  color: #fff;
+  color: #ffffff !important;
 }
 
 /* aplica status também nos quick-cards */
@@ -404,4 +407,23 @@ a:hover {
 .quick-card.status-online,
 .quick-card.status-offline {
   color: inherit;
+}
+
+/* força cores nos cards de Sistemas Corporativos */
+.corporate-grid a.status-unknown {
+  background: #f3f4f6 !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+.corporate-grid a.status-online {
+  background: #16a34a !important;
+  border-color: #12833e !important;
+  color: #ffffff !important;
+}
+
+.corporate-grid a.status-offline {
+  background: #ef4444 !important;
+  border-color: #d43636 !important;
+  color: #ffffff !important;
 }
