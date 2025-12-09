@@ -49,9 +49,9 @@
           <div class="birthdays-header">
             <h3>Aniversariantes</h3>
             <div class="month-nav">
-              <button type="button" aria-label="Mês anterior">&#8249;</button>
+              <button type="button" aria-label="Mes anterior">&#8249;</button>
               <span>dezembro</span>
-              <button type="button" aria-label="Próximo mês">&#8250;</button>
+              <button type="button" aria-label="Proximo mes">&#8250;</button>
             </div>
           </div>
           <ul data-birthdays></ul>
@@ -75,37 +75,34 @@
 
   <script>
     // Troque os href nos itens abaixo pelos links reais de cada card
+    // checkUrl é opcional; se vazio, usa o próprio href no health check.
     const quickLinks = [
-      { title: "Site CASA CIVIL", desc: "Institucional", icon: "home", href: "https://www.casacivil.mt.gov.br/a-secretaria" }, 
-      { title: "Ajuda", desc: "Sistema de Helpdesk", icon: "help", href: "https://atendimento.casacivil.mt.gov.br" },
-      { title: "Ramal", desc: "Sistema de ramais", icon: "phone", href: "https://www.casacivil.mt.gov.br/inicio" },
-      { title: "Capacitações Corporativa", desc: "Capacitações para os servidores público da Casa Civil", icon: "chip", href: "https://casacivil.intranet.mt.gov.br" },
-      { title: "Works", desc: "Gestão de comunicação e marketing", icon: "chat", href: "https://exemplo.com/works" },
-      { title: "Obras do Governo", desc: "Controle de obras", icon: "building", href: "https://tv.mt.gov.br" },
-    //  { title: "SSA", desc: "Saúde do servidor", icon: "users", href: "https://exemplo.com/ssa" },
-    //  { title: "SIAG", desc: "Aquisições governamentais", icon: "cart", href: "https://exemplo.com/siag" },
-    //  { title: "Sergipe móvel", desc: "Controle de combustível", icon: "fuel", href: "https://exemplo.com/sergipemovel" },
-      
-    //  { title: "SGT – Agenda", desc: "Sistema de Gestão Tecnológica", icon: "calendar", href: "https://exemplo.com/sgt" }
+      { title: "Site CASA CIVIL", desc: "Institucional", icon: "home", href: "https://www.casacivil.mt.gov.br/a-secretaria", checkUrl: "https://www.casacivil.mt.gov.br/favicon.ico" },
+      { title: "Ajuda", desc: "Sistema de Helpdesk", icon: "help", href: "https://atendimento.casacivil.mt.gov.br", checkUrl: "https://atendimento.casacivil.mt.gov.br/favicon.ico" },
+      { title: "Ramal", desc: "Sistema de ramais", icon: "phone", href: "https://www.casacivil.mt.gov.br/inicio", checkUrl: "https://www.casacivil.mt.gov.br/favicon.ico" },
+      { title: "Capacitacoes Corporativa", desc: "Capacitacoes para os servidores publicos da Casa Civil", icon: "chip", href: "https://casacivil.intranet.mt.gov.br", checkUrl: "https://casacivil.intranet.mt.gov.br/favicon.ico" },
+      { title: "Works", desc: "Gestao de comunicacao e marketing", icon: "chat", href: "https://exemplo.com/works", checkUrl: "https://exemplo.com/favicon.ico" },
+      { title: "Obras do Governo", desc: "Controle de obras", icon: "building", href: "https://tv.mt.gov.br", checkUrl: "https://tv.mt.gov.br/favicon.ico" }
     ];
 
+    // Para colorir verde/vermelho: defina um checkUrl (recurso leve, ex. favicon) para cada sistema.
     const corporateSystems = [
-      { title: "Portal do Servidor", href: "https://servicos.seplag.mt.gov.br/portalservidor/" },
-      { title: "Sistema SIGA-DOC", href: "https://www.sigadoc.mt.gov.br/" },
-      { title: "FIPLAN", href: "https://www.fiplan.mt.gov.br/Fiplan.jsp" },
-      { title: "SEAP", href: "https://seapng.seplag.mt.gov.br/" },
-      { title: "SIGPAS", href: "https://sigpas.seplag.mt.gov.br" },
-      { title: "SIGPAT", href: "#" },
-      { title: "Compras públicas", href: "https://aquisicoes.seplag.mt.gov.br" },
-      { title: "Legislação", href: "#" }
+      { title: "Portal do Servidor", href: "https://servicos.seplag.mt.gov.br/portalservidor/", checkUrl: "https://servicos.seplag.mt.gov.br/portalservidor/favicon.ico" },
+      { title: "Sistema SIGA-DOC", href: "https://www.sigadoc.mt.gov.br/", checkUrl: "https://www.sigadoc.mt.gov.br/favicon.ico" },
+      { title: "FIPLAN", href: "https://www.fiplan.mt.gov.br/Fiplan.jsp", checkUrl: "https://www.fiplan.mt.gov.br/favicon.ico" },
+      { title: "SEAP", href: "https://seapng.seplag.mt.gov.br/", checkUrl: "https://seapng.seplag.mt.gov.br/favicon.ico" },
+      { title: "SIGPAS", href: "https://sigpas.seplag.mt.gov.br", checkUrl: "https://sigpas.seplag.mt.gov.br/favicon.ico" },
+      { title: "SIGPAT", href: "#", checkUrl: "" },
+      { title: "Compras Publicas", href: "https://aquisicoes.seplag.mt.gov.br", checkUrl: "https://aquisicoes.seplag.mt.gov.br/favicon.ico" },
+      { title: "Legislacao", href: "#", checkUrl: "" }
     ];
 
     const birthdays = [
-      { date: "01/12", name: "EDÍLSON SANTOS SOUZA" },
+      { date: "01/12", name: "EDILSON SANTOS SOUZA" },
       { date: "01/12", name: "RICKSON BARBOSA" },
-      { date: "04/12", name: "TIAGO ANDRADE ARAÚJO" },
+      { date: "04/12", name: "TIAGO ANDRADE ARAUJO" },
       { date: "05/12", name: "RICARDO NASCIMENTO SANTOS" },
-      { date: "05/12", name: "NAYARA XAVIER DA CONCEIÇÃO" }
+      { date: "05/12", name: "NAYARA XAVIER DA CONCEICAO" }
     ];
 
     const icons = {
@@ -128,7 +125,7 @@
     function renderQuickLinks() {
       quickLinks.forEach((item) => {
         const link = document.createElement("a");
-        link.className = "quick-card";
+        link.className = "quick-card status-unknown";
         link.href = item.href;
         link.innerHTML = `
           <span class="icon">${icons[item.icon] || icons.home}</span>
@@ -146,6 +143,8 @@
         const link = document.createElement("a");
         link.href = item.href;
         link.textContent = item.title;
+        link.dataset.statusCard = "corporate";
+        link.classList.add("status-unknown");
         corporateContainer.appendChild(link);
       });
     }
@@ -164,6 +163,52 @@
     renderQuickLinks();
     renderCorporate();
     renderBirthdays();
+    checkCorporateStatus();
+    checkQuickLinksStatus();
+
+    // -------- Status dos sistemas (online/offline) --------
+    function probeUrl(url, timeout = 5000) {
+      return new Promise((resolve) => {
+        if (!url || url === "#") return resolve(false);
+        const img = new Image();
+        let finished = false;
+        const done = (ok) => {
+          if (finished) return;
+          finished = true;
+          resolve(ok);
+          clearTimeout(timer);
+        };
+        const cacheBust = url.includes("?") ? "&" : "?";
+        img.onload = () => done(true);
+        img.onerror = () => done(false);
+        img.src = `${url}${cacheBust}ping=${Date.now()}`;
+        const timer = setTimeout(() => done(false), timeout);
+      });
+    }
+
+    function checkCorporateStatus() {
+      const links = corporateContainer.querySelectorAll("a");
+      links.forEach((el, idx) => {
+        const target = corporateSystems[idx];
+        const testUrl = target?.checkUrl || target?.href;
+        probeUrl(testUrl).then((ok) => {
+          el.classList.remove("status-online", "status-offline", "status-unknown");
+          el.classList.add(ok ? "status-online" : "status-offline");
+        });
+      });
+    }
+
+    function checkQuickLinksStatus() {
+      const links = quickLinksContainer.querySelectorAll(".quick-card");
+      links.forEach((el, idx) => {
+        const target = quickLinks[idx];
+        const testUrl = target?.checkUrl || target?.href;
+        probeUrl(testUrl).then((ok) => {
+          el.classList.remove("status-online", "status-offline", "status-unknown");
+          el.classList.add(ok ? "status-online" : "status-offline");
+        });
+      });
+    }
   </script>
 </body>
 </html>

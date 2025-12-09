@@ -379,3 +379,29 @@ a:hover {
     height: 30px;
   }
 }
+
+/* status para sistemas corporativos */
+.status-unknown {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #1f2937;
+}
+
+.status-online {
+  background: #16a34a;
+  border-color: #12833e;
+  color: #0b2812;
+}
+
+.status-offline {
+  background: #ef4444;
+  border-color: #d43636;
+  color: #fff;
+}
+
+/* aplica status também nos quick-cards */
+.quick-card.status-unknown,
+.quick-card.status-online,
+.quick-card.status-offline {
+  color: inherit;
+}
