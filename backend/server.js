@@ -81,9 +81,8 @@ app.get("/api/links", async (_req, res) => {
 
 app.get("/api/health", async (_req, res) => {
   try {
-    const { quickLinks, corporateSystems } = await loadLinks();
-    const combined = [...quickLinks, ...corporateSystems];
-    const statuses = await checkTargets(combined);
+    const { corporateSystems } = await loadLinks();
+    const statuses = await checkTargets(corporateSystems);
     res.json(statuses);
   } catch (err) {
     res.status(500).json({ error: "health_check_failed", details: err?.message });
