@@ -6,7 +6,7 @@
       "desc": "Institucional",
       "icon": "home",
       "href": "https://www.casacivil.mt.gov.br/a-secretaria",
-      "checkUrl": "https://www.casacivil.mt.gov.br/favicon.ico"
+      "checkUrl": ""
     },
     {
       "id": "ajuda",
@@ -14,7 +14,7 @@
       "desc": "Sistema de Helpdesk",
       "icon": "help",
       "href": "https://atendimento.casacivil.mt.gov.br",
-      "checkUrl": "https://atendimento.casacivil.mt.gov.br/favicon.ico"
+      "checkUrl": ""
     },
     {
       "id": "ramal",
@@ -22,7 +22,7 @@
       "desc": "Sistema de ramais",
       "icon": "phone",
       "href": "https://www.casacivil.mt.gov.br/inicio",
-      "checkUrl": "https://www.casacivil.mt.gov.br/favicon.ico"
+      "checkUrl": ""
     },
     {
       "id": "capacitacoes",
@@ -30,7 +30,7 @@
       "desc": "Capacitacoes para os servidores publicos da Casa Civil",
       "icon": "chip",
       "href": "https://casacivil.intranet.mt.gov.br",
-      "checkUrl": "https://casacivil.intranet.mt.gov.br/favicon.ico"
+      "checkUrl": ""
     },
     {
       "id": "works",
@@ -38,7 +38,7 @@
       "desc": "Gestao de comunicacao e marketing",
       "icon": "chat",
       "href": "https://exemplo.com/works",
-      "checkUrl": "https://exemplo.com/favicon.ico"
+      "checkUrl": ""
     },
     {
       "id": "obras",
@@ -46,7 +46,7 @@
       "desc": "Controle de obras",
       "icon": "building",
       "href": "https://tv.mt.gov.br",
-      "checkUrl": "https://tv.mt.gov.br/favicon.ico"
+      "checkUrl": ""
     }
   ],
   "corporateSystems": [
@@ -54,31 +54,31 @@
       "id": "portal-servidor",
       "title": "Portal do Servidor",
       "href": "https://servicos.seplag.mt.gov.br/portalservidor/",
-      "checkUrl": "https://servicos.seplag.mt.gov.br/portalservidor/favicon.ico"
+      "checkUrl": "https://servicos.seplag.mt.gov.br/portalservidor/api/health"
     },
     {
       "id": "siga-doc",
       "title": "Sistema SIGA-DOC",
       "href": "https://www.sigadoc.mt.gov.br/",
-      "checkUrl": "https://www.sigadoc.mt.gov.br/favicon.ico"
+      "checkUrl": "https://www.sigadoc.mt.gov.br/api/health"
     },
     {
       "id": "fiplan",
       "title": "FIPLAN",
       "href": "https://www.fiplan.mt.gov.br/Fiplan.jsp",
-      "checkUrl": "https://www.fiplan.mt.gov.br/favicon.ico"
+      "checkUrl": "https://www.fiplan.mt.gov.br/api/health"
     },
     {
       "id": "seap",
       "title": "SEAP",
       "href": "https://seapng.seplag.mt.gov.br/",
-      "checkUrl": "https://seapng.seplag.mt.gov.br/favicon.ico"
+      "checkUrl": "https://seapng.seplag.mt.gov.br/api/health"
     },
     {
       "id": "sigpas",
       "title": "SIGPAS",
       "href": "https://sigpas.seplag.mt.gov.br",
-      "checkUrl": "https://sigpas.seplag.mt.gov.br/favicon.ico"
+      "checkUrl": "https://sigpas.seplag.mt.gov.br/api/health"
     },
     {
       "id": "sigpat",
@@ -90,7 +90,7 @@
       "id": "compras-publicas",
       "title": "Compras Publicas",
       "href": "https://aquisicoes.seplag.mt.gov.br",
-      "checkUrl": "https://aquisicoes.seplag.mt.gov.br/favicon.ico"
+      "checkUrl": "https://aquisicoes.seplag.mt.gov.br/api/health"
     },
     {
       "id": "legislacao",

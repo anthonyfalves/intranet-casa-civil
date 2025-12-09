@@ -21,20 +21,26 @@ async function loadLinks() {
   return cachedLinks;
 }
 
-async function headOrGet(url, timeout = HEALTH_TIMEOUT) {
+async function fetchHealthUrl(url, timeout = HEALTH_TIMEOUT) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetch(url, { method: "HEAD", signal: controller.signal });
-    return res.ok;
-  } catch (_) {
-    // fallback para GET leve
-    try {
-      const res = await fetch(url, { method: "GET", signal: controller.signal });
-      return res.ok;
-    } catch {
-      return false;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { Accept: "application/json,text/plain" },
+      signal: controller.signal
+    });
+    if (!res.ok) return false;
+
+    // tenta interpretar o corpo; considera online apenas se conteúdo indica saúde
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const json = await res.json().catch(() => null);
+      return json && (json.status === "ok" || json.healthy === true);
     }
+
+    const text = (await res.text()).trim().toLowerCase();
+    return text === "ok" || text === "healthy" || text.includes("status: ok");
   } finally {
     clearTimeout(id);
   }
@@ -54,7 +60,7 @@ async function checkTargets(targets) {
       statuses[item.id] = cached.status;
       continue;
     }
-    const ok = await headOrGet(url);
+    const ok = await fetchHealthUrl(url);
     const status = ok ? "online" : "offline";
     healthCache.set(item.id, { status, ts: now });
     statuses[item.id] = status;
