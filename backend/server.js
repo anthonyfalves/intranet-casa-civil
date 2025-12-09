@@ -30,19 +30,11 @@ async function fetchHealthUrl(url, timeout = HEALTH_TIMEOUT) {
       headers: { Accept: "application/json,text/plain" },
       signal: controller.signal
     });
-    if (!res.ok) return false;
-
-    // tenta interpretar o corpo; considera online apenas se conteúdo indica saúde
-    const contentType = res.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      const json = await res.json().catch(() => null);
-      return json && (json.status === "ok" || json.healthy === true) ? true : false;
-    }
-
-    const text = (await res.text()).trim().toLowerCase();
-    return text === "ok" || text === "healthy" || text.includes("status: ok");
+    // Qualquer 2xx já conta como online (não exige corpo especial)
+    if (res.ok) return true;
+    return false;
   } catch {
-    // falha de rede/timeout = inconclusivo
+    // Falha de rede/timeout = inconclusivo
     return null;
   } finally {
     clearTimeout(id);
@@ -53,8 +45,10 @@ async function checkTargets(targets) {
   const now = Date.now();
   const statuses = {};
   for (const item of targets) {
-    const url = item.checkUrl || item.href;
-    if (!url || url === "#") {
+    const primary = item.checkUrl || item.href;
+    const fallback = item.href;
+
+    if (!primary || primary === "#") {
       statuses[item.id] = "unknown";
       continue;
     }
@@ -63,7 +57,11 @@ async function checkTargets(targets) {
       statuses[item.id] = cached.status;
       continue;
     }
-    const ok = await fetchHealthUrl(url);
+    let ok = await fetchHealthUrl(primary);
+    if (ok === false && fallback && fallback !== primary && fallback !== "#") {
+      // Se a URL dedicada falhar, tenta o href como segunda chance
+      ok = await fetchHealthUrl(fallback);
+    }
     const status = ok === true ? "online" : ok === false ? "offline" : "unknown";
     healthCache.set(item.id, { status, ts: now });
     statuses[item.id] = status;
