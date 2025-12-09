@@ -74,28 +74,27 @@
   </div>
 
   <script>
-    // Troque os href nos itens abaixo pelos links reais de cada card
-    // checkUrl é opcional; se vazio, usa o próprio href no health check.
-    const quickLinks = [
-      { title: "Site CASA CIVIL", desc: "Institucional", icon: "home", href: "https://www.casacivil.mt.gov.br/a-secretaria", checkUrl: "https://www.casacivil.mt.gov.br/favicon.ico" },
-      { title: "Ajuda", desc: "Sistema de Helpdesk", icon: "help", href: "https://atendimento.casacivil.mt.gov.br", checkUrl: "https://atendimento.casacivil.mt.gov.br/favicon.ico" },
-      { title: "Ramal", desc: "Sistema de ramais", icon: "phone", href: "https://www.casacivil.mt.gov.br/inicio", checkUrl: "https://www.casacivil.mt.gov.br/favicon.ico" },
-      { title: "Capacitacoes Corporativa", desc: "Capacitacoes para os servidores publicos da Casa Civil", icon: "chip", href: "https://casacivil.intranet.mt.gov.br", checkUrl: "https://casacivil.intranet.mt.gov.br/favicon.ico" },
-      { title: "Works", desc: "Gestao de comunicacao e marketing", icon: "chat", href: "https://exemplo.com/works", checkUrl: "https://exemplo.com/favicon.ico" },
-      { title: "Obras do Governo", desc: "Controle de obras", icon: "building", href: "https://tv.mt.gov.br", checkUrl: "https://tv.mt.gov.br/favicon.ico" }
-    ];
-
-    // Para colorir verde/vermelho: defina um checkUrl (recurso leve, ex. favicon) para cada sistema.
-    const corporateSystems = [
-      { title: "Portal do Servidor", href: "https://servicos.seplag.mt.gov.br/portalservidor/", checkUrl: "https://servicos.seplag.mt.gov.br/portalservidor/favicon.ico" },
-      { title: "Sistema SIGA-DOC", href: "https://www.sigadoc.mt.gov.br/", checkUrl: "https://www.sigadoc.mt.gov.br/favicon.ico" },
-      { title: "FIPLAN", href: "https://www.fiplan.mt.gov.br/Fiplan.jsp", checkUrl: "https://www.fiplan.mt.gov.br/favicon.ico" },
-      { title: "SEAP", href: "https://seapng.seplag.mt.gov.br/", checkUrl: "https://seapng.seplag.mt.gov.br/favicon.ico" },
-      { title: "SIGPAS", href: "https://sigpas.seplag.mt.gov.br", checkUrl: "https://sigpas.seplag.mt.gov.br/favicon.ico" },
-      { title: "SIGPAT", href: "#", checkUrl: "" },
-      { title: "Compras Publicas", href: "https://aquisicoes.seplag.mt.gov.br", checkUrl: "https://aquisicoes.seplag.mt.gov.br/favicon.ico" },
-      { title: "Legislacao", href: "#", checkUrl: "" }
-    ];
+    // Arrays de fallback caso o backend /api/links não esteja rodando
+    const fallbackLinks = {
+      quickLinks: [
+        { id: "casa-civil", title: "Site CASA CIVIL", desc: "Institucional", icon: "home", href: "https://www.casacivil.mt.gov.br/a-secretaria", checkUrl: "https://www.casacivil.mt.gov.br/favicon.ico" },
+        { id: "ajuda", title: "Ajuda", desc: "Sistema de Helpdesk", icon: "help", href: "https://atendimento.casacivil.mt.gov.br", checkUrl: "https://atendimento.casacivil.mt.gov.br/favicon.ico" },
+        { id: "ramal", title: "Ramal", desc: "Sistema de ramais", icon: "phone", href: "https://www.casacivil.mt.gov.br/inicio", checkUrl: "https://www.casacivil.mt.gov.br/favicon.ico" },
+        { id: "capacitacoes", title: "Capacitacoes Corporativa", desc: "Capacitacoes para os servidores publicos da Casa Civil", icon: "chip", href: "https://casacivil.intranet.mt.gov.br", checkUrl: "https://casacivil.intranet.mt.gov.br/favicon.ico" },
+        { id: "works", title: "Works", desc: "Gestao de comunicacao e marketing", icon: "chat", href: "https://exemplo.com/works", checkUrl: "https://exemplo.com/favicon.ico" },
+        { id: "obras", title: "Obras do Governo", desc: "Controle de obras", icon: "building", href: "https://tv.mt.gov.br", checkUrl: "https://tv.mt.gov.br/favicon.ico" }
+      ],
+      corporateSystems: [
+        { id: "portal-servidor", title: "Portal do Servidor", href: "https://servicos.seplag.mt.gov.br/portalservidor/", checkUrl: "https://servicos.seplag.mt.gov.br/portalservidor/favicon.ico" },
+        { id: "siga-doc", title: "Sistema SIGA-DOC", href: "https://www.sigadoc.mt.gov.br/", checkUrl: "https://www.sigadoc.mt.gov.br/favicon.ico" },
+        { id: "fiplan", title: "FIPLAN", href: "https://www.fiplan.mt.gov.br/Fiplan.jsp", checkUrl: "https://www.fiplan.mt.gov.br/favicon.ico" },
+        { id: "seap", title: "SEAP", href: "https://seapng.seplag.mt.gov.br/", checkUrl: "https://seapng.seplag.mt.gov.br/favicon.ico" },
+        { id: "sigpas", title: "SIGPAS", href: "https://sigpas.seplag.mt.gov.br", checkUrl: "https://sigpas.seplag.mt.gov.br/favicon.ico" },
+        { id: "sigpat", title: "SIGPAT", href: "#", checkUrl: "" },
+        { id: "compras-publicas", title: "Compras Publicas", href: "https://aquisicoes.seplag.mt.gov.br", checkUrl: "https://aquisicoes.seplag.mt.gov.br/favicon.ico" },
+        { id: "legislacao", title: "Legislacao", href: "#", checkUrl: "" }
+      ]
+    };
 
     const birthdays = [
       { date: "01/12", name: "EDILSON SANTOS SOUZA" },
@@ -160,11 +159,7 @@
       });
     }
 
-    renderQuickLinks();
-    renderCorporate();
-    renderBirthdays();
-    checkCorporateStatus();
-    checkQuickLinksStatus();
+    init();
 
     // -------- Status dos sistemas (online/offline) --------
     function probeUrl(url, timeout = 5000) {
@@ -186,27 +181,87 @@
       });
     }
 
-    function checkCorporateStatus() {
-      const links = corporateContainer.querySelectorAll("a");
-      links.forEach((el, idx) => {
-        const target = corporateSystems[idx];
-        const testUrl = target?.checkUrl || target?.href;
-        probeUrl(testUrl).then((ok) => {
-          el.classList.remove("status-online", "status-offline", "status-unknown");
-          el.classList.add(ok ? "status-online" : "status-offline");
+    async function fetchLinks() {
+      try {
+        const res = await fetch("/api/links", { cache: "no-store" });
+        if (!res.ok) throw new Error("links fetch failed");
+        return await res.json();
+      } catch {
+        return fallbackLinks;
+      }
+    }
+
+    async function fetchHealth(ids) {
+      try {
+        const res = await fetch("/api/health", { cache: "no-store" });
+        if (!res.ok) throw new Error("health fetch failed");
+        const data = await res.json();
+        // filtra apenas os ids renderizados
+        const filtered = {};
+        ids.forEach((id) => {
+          filtered[id] = data[id] || "offline";
         });
+        return filtered;
+      } catch {
+        // falhou: tudo fica unknown
+        const fallback = {};
+        ids.forEach((id) => (fallback[id] = "unknown"));
+        return fallback;
+      }
+    }
+
+    function applyStatus(elements, data) {
+      elements.forEach((el) => {
+        const id = el.dataset.id;
+        const status = data[id] || "unknown";
+        el.classList.remove("status-online", "status-offline", "status-unknown");
+        el.classList.add(
+          status === "online" ? "status-online" :
+          status === "offline" ? "status-offline" : "status-unknown"
+        );
       });
     }
 
-    function checkQuickLinksStatus() {
-      const links = quickLinksContainer.querySelectorAll(".quick-card");
-      links.forEach((el, idx) => {
-        const target = quickLinks[idx];
-        const testUrl = target?.checkUrl || target?.href;
-        probeUrl(testUrl).then((ok) => {
-          el.classList.remove("status-online", "status-offline", "status-unknown");
-          el.classList.add(ok ? "status-online" : "status-offline");
-        });
+    async function init() {
+      const { quickLinks, corporateSystems } = await fetchLinks();
+      renderQuickLinks(quickLinks);
+      renderCorporate(corporateSystems);
+      renderBirthdays();
+
+      const allIds = [
+        ...quickLinks.map((i) => i.id),
+        ...corporateSystems.map((i) => i.id)
+      ];
+      const health = await fetchHealth(allIds);
+      applyStatus(quickLinksContainer.querySelectorAll(".quick-card"), health);
+      applyStatus(corporateContainer.querySelectorAll("a"), health);
+    }
+
+    function renderQuickLinks(data) {
+      data.forEach((item) => {
+        const link = document.createElement("a");
+        link.className = "quick-card status-unknown";
+        link.href = item.href;
+        link.dataset.id = item.id;
+        link.innerHTML = `
+          <span class="icon">${icons[item.icon] || icons.home}</span>
+          <div>
+            <h3>${item.title}</h3>
+            <p>${item.desc}</p>
+          </div>
+        `;
+        quickLinksContainer.appendChild(link);
+      });
+    }
+
+    function renderCorporate(data) {
+      data.forEach((item) => {
+        const link = document.createElement("a");
+        link.href = item.href;
+        link.textContent = item.title;
+        link.dataset.id = item.id;
+        link.classList.add("status-unknown");
+        corporateContainer.appendChild(link);
       });
     }
   </script>
