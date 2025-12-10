@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Intranet</title>
+  <style>
+    body { font-family: "Segoe UI", Arial, sans-serif; background: #f6f8fb; margin: 0; padding: 24px; color: #111827; }
+    h1 { margin: 0 0 12px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; max-width: 480px; box-shadow: 0 10px 25px rgba(15,23,42,0.06); }
+    label { font-weight: 700; display: block; margin-bottom: 6px; }
+    input[type="file"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 12px; }
+    button { background: #0f6fff; color: #fff; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .status { margin-top: 10px; font-size: 14px; }
+    .ok { color: #16a34a; }
+    .err { color: #dc2626; }
+  </style>
+</head>
+<body>
+  <h1>Admin - Aniversariantes</h1>
+  <p>Use esta página para enviar um arquivo CSV, XLS, XLSX ou JSON com a lista de aniversariantes.</p>
+  <div class="card">
+    <label for="token">Token (X-Admin-Token)</label>
+    <input type="password" id="token" placeholder="Informe o token de admin">
+
+    <label for="file">Arquivo</label>
+    <input type="file" id="file" accept=".csv,.xls,.xlsx,.json">
+
+    <button id="send">Enviar</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    const btn = document.getElementById("send");
+    const fileInput = document.getElementById("file");
+    const tokenInput = document.getElementById("token");
+    const statusEl = document.getElementById("status");
+
+    btn.addEventListener("click", async () => {
+      statusEl.textContent = "";
+      const file = fileInput.files[0];
+      const token = tokenInput.value.trim();
+      if (!file) {
+        statusEl.textContent = "Selecione um arquivo.";
+        statusEl.className = "status err";
+        return;
+      }
+      if (!token) {
+        statusEl.textContent = "Informe o token.";
+        statusEl.className = "status err";
+        return;
+      }
+      btn.disabled = true;
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/admin/birthdays/upload", {
+          method: "POST",
+          headers: { "x-admin-token": token },
+          body: form
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "Falha no upload");
+        statusEl.textContent = `Salvo com sucesso (${data.saved} registros)`;
+        statusEl.className = "status ok";
+      } catch (err) {
+        statusEl.textContent = err.message || "Erro ao enviar";
+        statusEl.className = "status err";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
