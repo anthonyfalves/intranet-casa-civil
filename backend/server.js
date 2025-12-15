@@ -18,10 +18,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FRONT_ROOT = path.join(__dirname, "..", "frontend");
 // pasta centralizada para os "dados" (ex.: aniversariantes)
 const DATA_DIR = path.join(__dirname, "database", "birthdays");
+const BANNER_DIR = path.join(DATA_DIR, "banners");
+const BANNER_META_PATH = path.join(BANNER_DIR, "banner.json");
+const ALLOWED_BANNER_EXT = ["png", "jpg", "jpeg", "gif", "webp"];
+const BANNER_MAX = 10;
 
 let cachedLinks = null;
 let healthCache = new Map(); // id -> { status, ts }
 let cachedBirthdays = null;
+let cachedBanner = null;
 
 async function loadLinks() {
   if (cachedLinks) return cachedLinks;
@@ -39,6 +44,25 @@ async function loadBirthdays() {
   } catch {
     cachedBirthdays = [];
     return cachedBirthdays;
+  }
+}
+
+async function loadBanner() {
+  if (cachedBanner) return cachedBanner;
+  try {
+    const raw = await readFile(BANNER_META_PATH, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      cachedBanner = parsed;
+    } else if (parsed && parsed.url) {
+      cachedBanner = [parsed];
+    } else {
+      cachedBanner = [];
+    }
+    return cachedBanner;
+  } catch {
+    cachedBanner = [];
+    return [];
   }
 }
 
@@ -94,6 +118,8 @@ async function checkTargets(targets) {
 }
 
 app.use(express.static(FRONT_ROOT, { extensions: ["html"] }));
+// expõe uploads de imagens
+app.use("/uploads", express.static(path.join(__dirname, "database")));
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -125,6 +151,15 @@ app.get("/api/birthdays", async (_req, res) => {
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: "birthdays_load_failed", details: err?.message });
+  }
+});
+
+app.get("/api/birthdays/banner", async (_req, res) => {
+  try {
+    const list = await loadBanner();
+    res.json({ banners: list || [] });
+  } catch (err) {
+    res.status(500).json({ error: "banner_load_failed", details: err?.message });
   }
 });
 
@@ -201,12 +236,31 @@ function normalizeRecords(list) {
       item["data de nascimento"] ||
       item["dt nascimento"];
     const date = normalizeDate(dateRaw);
-    const name = sanitizeName(item.name || item.nome || item.colaborador);
+    const name = sanitizeName(
+      item.name ||
+        item.nome ||
+        item.colaborador ||
+        item["nome completo"] // ex.: CSV com cabeçalho "Nome Completo"
+    );
     const dept = sanitizeName(item.dept || item.setor || item.departamento || item.lotacao);
     if (!date || !name) continue;
     result.push({ date, name, dept: dept || undefined });
   }
   return result;
+}
+
+async function removeOldBanners(listToRemove) {
+  if (!Array.isArray(listToRemove) || !listToRemove.length) return;
+  await Promise.all(
+    listToRemove.map(async (item) => {
+      const oldPath = path.join(BANNER_DIR, item.filename);
+      try {
+        await fs.promises.unlink(oldPath);
+      } catch {
+        // se o arquivo nao existir, segue sem erro
+      }
+    })
+  );
 }
 
 // Temporariamente sem token para facilitar teste; reative authAdmin depois
@@ -239,6 +293,36 @@ app.post("/api/admin/birthdays/upload", upload.single("file"), async (req, res) 
     res.json({ saved: normalized.length });
   } catch (err) {
     res.status(500).json({ error: "upload_failed", details: err?.message });
+  }
+});
+
+app.post("/api/admin/birthdays/banner", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "file_required" });
+    const ext = (req.file.originalname.split(".").pop() || "").toLowerCase();
+    if (!ALLOWED_BANNER_EXT.includes(ext)) {
+      return res.status(400).json({ error: "unsupported_extension", allowed: ALLOWED_BANNER_EXT });
+    }
+
+    await fs.promises.mkdir(BANNER_DIR, { recursive: true });
+    const filename = `banner-${Date.now()}.${ext}`;
+    const filePath = path.join(BANNER_DIR, filename);
+    const previous = await loadBanner();
+
+    await fs.promises.writeFile(filePath, req.file.buffer);
+    const publicUrl = `/uploads/birthdays/banners/${filename}`;
+    const newEntry = { url: publicUrl, filename, uploadedAt: Date.now() };
+    const merged = [newEntry, ...(previous || [])].sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+    const toKeep = merged.slice(0, BANNER_MAX);
+    const toRemove = merged.slice(BANNER_MAX);
+    await removeOldBanners(toRemove);
+
+    await fs.promises.writeFile(BANNER_META_PATH, JSON.stringify(toKeep, null, 2), "utf-8");
+    cachedBanner = toKeep;
+
+    res.json({ url: publicUrl, banners: toKeep });
+  } catch (err) {
+    res.status(500).json({ error: "banner_upload_failed", details: err?.message });
   }
 });
 

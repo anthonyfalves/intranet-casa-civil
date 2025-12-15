@@ -44,7 +44,10 @@
 
     <section class="main-grid">
       <div class="left-col">
-        <a class="banner" href="#" aria-label="Aviso de feriado"></a>
+        <a class="banner" href="#" aria-label="Aviso de feriado">
+          <button class="banner-nav banner-nav-left" type="button" aria-label="Anterior" data-banner-prev>&#8249;</button>
+          <button class="banner-nav banner-nav-right" type="button" aria-label="Proximo" data-banner-next>&#8250;</button>
+        </a>
 
         <div class="birthdays">
           <div class="birthdays-header">
@@ -72,6 +75,14 @@
       <h2>Sistemas Corporativos</h2>
       <div class="corporate-grid" data-corporate-links></div>
     </section>
+  </div>
+
+  <div class="banner-modal-root" data-banner-modal>
+    <div class="banner-modal-scrim" data-banner-modal-close></div>
+    <div class="banner-modal-card">
+      <div class="banner-modal-visual" data-banner-modal-visual></div>
+      <button class="banner-modal-close" type="button" aria-label="Fechar" data-banner-modal-close>&times;</button>
+    </div>
   </div>
 
   <script>
@@ -111,6 +122,15 @@
     const quickLinksContainer = document.querySelector("[data-quick-links]");
     const corporateContainer = document.querySelector("[data-corporate-links]");
     const birthdaysList = document.querySelector("[data-birthdays]");
+    const bannerEl = document.querySelector(".banner");
+    const bannerModal = document.querySelector("[data-banner-modal]");
+    const bannerModalVisual = document.querySelector("[data-banner-modal-visual]");
+    const bannerModalCloseEls = document.querySelectorAll("[data-banner-modal-close]");
+    const bannerPrev = document.querySelector("[data-banner-prev]");
+    const bannerNext = document.querySelector("[data-banner-next]");
+    let currentBannerUrl = null;
+    let bannerList = [];
+    let bannerIndex = 0;
 
     async function fetchLinks() {
       try {
@@ -154,13 +174,15 @@
     }
 
     async function init() {
-      const [{ quickLinks, corporateSystems }, birthdays] = await Promise.all([
-        fetchLinks(),
-        fetchBirthdays()
-      ]);
-      renderQuickLinks(quickLinks);
-      renderCorporate(corporateSystems);
-      renderBirthdays(birthdays);
+    const [{ quickLinks, corporateSystems }, birthdays, bannerData] = await Promise.all([
+      fetchLinks(),
+      fetchBirthdays(),
+      fetchBanner()
+    ]);
+    renderQuickLinks(quickLinks);
+    renderCorporate(corporateSystems);
+    renderBirthdays(birthdays);
+    renderBanner(bannerData.banners || []);
 
       // health check somente para Sistemas Corporativos
       const corporateIds = corporateSystems.map((i) => i.id);
@@ -177,6 +199,17 @@
         return [];
       }
     }
+
+    async function fetchBanner() {
+      try {
+        const res = await fetch("/api/birthdays/banner", { cache: "no-store" });
+        if (!res.ok) throw new Error("banner fetch failed");
+        return await res.json();
+      } catch {
+        return { banners: [] };
+      }
+    }
+
     function renderQuickLinks(data) {
       data.forEach((item) => {
         const link = document.createElement("a");
@@ -194,8 +227,38 @@
       });
     }
 
+    function renderBanner(list) {
+      if (!bannerEl) return;
+      bannerList = Array.isArray(list) ? list : [];
+      bannerIndex = 0;
+      if (!bannerList.length) {
+        bannerEl.style.backgroundImage = "";
+        bannerEl.dataset.hasBanner = "false";
+        currentBannerUrl = null;
+        return;
+      }
+      applyBannerBackground();
+      bannerEl.dataset.hasBanner = "true";
+    }
+
+    function applyBannerBackground() {
+      if (!bannerList.length) return;
+      const item = bannerList[bannerIndex];
+      currentBannerUrl = item?.url || null;
+      bannerEl.style.backgroundImage = currentBannerUrl ? `url(${currentBannerUrl})` : "";
+      bannerEl.dataset.hasBanner = "true";
+      updateNavState();
+    }
+
     function renderBirthdays(list) {
       birthdaysList.innerHTML = "";
+      if (!list.length) {
+        const li = document.createElement("li");
+        li.className = "empty";
+        li.textContent = "Em breve";
+        birthdaysList.appendChild(li);
+        return;
+      }
       list.forEach((person) => {
         const li = document.createElement("li");
         li.innerHTML = `
@@ -223,6 +286,68 @@
     } else {
       init();
     }
+
+    function openBannerModal() {
+      if (!currentBannerUrl || !bannerModal || !bannerModalVisual) return;
+      bannerModalVisual.innerHTML = `<img src="${currentBannerUrl}" alt="Banner em tela cheia">`;
+      bannerModal.classList.add("active");
+      document.body.classList.add("modal-open");
+    }
+
+    function closeBannerModal() {
+      if (!bannerModal || !bannerModalVisual) return;
+      bannerModal.classList.remove("active");
+      document.body.classList.remove("modal-open");
+      bannerModalVisual.innerHTML = "";
+    }
+
+    if (bannerEl) {
+      bannerEl.addEventListener("click", (e) => {
+        if (bannerEl.dataset.hasBanner === "true") {
+          e.preventDefault();
+          openBannerModal();
+        }
+      });
+    }
+
+    function updateNavState() {
+      const hasMany = bannerList.length > 1;
+      if (bannerPrev) bannerPrev.style.display = hasMany ? "flex" : "none";
+      if (bannerNext) bannerNext.style.display = hasMany ? "flex" : "none";
+    }
+
+    function goPrev() {
+      if (!bannerList.length) return;
+      bannerIndex = (bannerIndex - 1 + bannerList.length) % bannerList.length;
+      applyBannerBackground();
+    }
+
+    function goNext() {
+      if (!bannerList.length) return;
+      bannerIndex = (bannerIndex + 1) % bannerList.length;
+      applyBannerBackground();
+    }
+
+    if (bannerPrev) bannerPrev.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); goPrev(); });
+    if (bannerNext) bannerNext.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); goNext(); });
+
+    bannerModalCloseEls.forEach((el) => {
+      el.addEventListener("click", closeBannerModal);
+    });
+
+    if (bannerModal) {
+      bannerModal.addEventListener("click", (e) => {
+        if (e.target === bannerModal || e.target.classList.contains("banner-modal-scrim")) {
+          closeBannerModal();
+        }
+      });
+    }
+
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "Escape" && bannerModal?.classList.contains("active")) {
+        closeBannerModal();
+      }
+    });
   </script>
 </body>
 </html>

@@ -7,28 +7,71 @@
   <style>
     body { font-family: "Segoe UI", Arial, sans-serif; background: #f6f8fb; margin: 0; padding: 24px; color: #111827; }
     h1 { margin: 0 0 12px; }
-    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; max-width: 480px; box-shadow: 0 10px 25px rgba(15,23,42,0.06); }
+    h2 { margin: 0 0 10px; font-size: 18px; }
+    .wrap { max-width: 560px; margin: 0 auto; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; box-shadow: 0 10px 25px rgba(15,23,42,0.06); }
+    .card + .card { margin-top: 16px; }
     label { font-weight: 700; display: block; margin-bottom: 6px; }
-    input[type="file"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 12px; }
+    input[type="file"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 12px; background: #fff; }
     button { background: #0f6fff; color: #fff; border: none; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
     .status { margin-top: 10px; font-size: 14px; }
     .ok { color: #16a34a; }
     .err { color: #dc2626; }
+    .muted { color: #6b7280; font-size: 14px; margin: 0 0 12px; }
+    .preview { margin-top: 10px; border: 1px dashed #d1d5db; background: #f8fafc; border-radius: 10px; min-height: 120px; display: grid; place-items: center; color: #6b7280; font-size: 14px; overflow: hidden; padding: 6px; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+    .preview:hover { border-color: #0f6fff; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08); }
+    .preview img { width: 100%; display: block; border-radius: 8px; }
+    /* Modal */
+    .modal-root { position: fixed; inset: 0; display: none; place-items: center; z-index: 999; }
+    .modal-root.active { display: grid; }
+    .modal-scrim { position: absolute; inset: 0; background: rgba(5, 10, 20, 0.6); backdrop-filter: blur(16px); }
+    .modal-card { position: relative; width: min(520px, 88vw); aspect-ratio: 3 / 4; border-radius: 20px; background: #0d1b3a; box-shadow: 0 24px 60px rgba(46, 139, 255, 0.35), 0 0 70px rgba(46, 139, 255, 0.45); overflow: hidden; display: grid; place-items: center; }
+    .modal-visual { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(13, 27, 58, 0.9), rgba(18, 47, 94, 0.95)); display: grid; place-items: center; }
+    .modal-visual::after { content: ""; position: absolute; inset: 0; background: rgba(4, 8, 16, 0.08); }
+    .modal-visual img { position: relative; z-index: 1; max-width: 100%; max-height: 100%; object-fit: contain; padding: 22px; }
+    .modal-close { position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(7, 12, 24, 0.55); color: #fff; font-size: 18px; cursor: pointer; display: grid; place-items: center; }
+    .modal-close:hover { background: rgba(15, 26, 52, 0.8); }
+    body.modal-open { overflow: hidden; }
   </style>
 </head>
 <body>
-  <h1>Admin - Aniversariantes</h1>
-  <p>Use esta página para enviar um arquivo CSV, XLS, XLSX ou JSON com a lista de aniversariantes.</p>
-  <div class="card">
-    <label for="token">Token (X-Admin-Token)</label>
-    <input type="password" id="token" placeholder="Informe o token de admin">
+  <div class="wrap">
+    <h1>Admin - Aniversariantes</h1>
+    <p>Use esta página para enviar a lista de aniversariantes e também o banner exibido acima da lista na intranet.</p>
 
-    <label for="file">Arquivo</label>
-    <input type="file" id="file" accept=".csv,.xls,.xlsx,.json">
+    <div class="card">
+      <h2>Token</h2>
+      <label for="token">Token (X-Admin-Token)</label>
+      <input type="password" id="token" placeholder="Informe o token de admin">
+      <p class="muted">O mesmo token é usado para os dois envios abaixo.</p>
+    </div>
 
-    <button id="send">Enviar</button>
-    <div class="status" id="status"></div>
+    <div class="card">
+      <h2>Lista de aniversariantes</h2>
+      <label for="file">Arquivo (CSV, XLS, XLSX ou JSON)</label>
+      <input type="file" id="file" accept=".csv,.xls,.xlsx,.json">
+      <button id="send">Enviar lista</button>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="card">
+      <h2>Banner (acima da lista)</h2>
+      <p class="muted">Formatos aceitos: PNG, JPG, JPEG, GIF ou WEBP.</p>
+      <label for="banner">Imagem</label>
+      <input type="file" id="banner" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp">
+      <button id="send-banner">Enviar banner</button>
+      <div class="preview" id="banner-preview">Nenhuma imagem salva</div>
+      <div class="status" id="status-banner"></div>
+    </div>
+  </div>
+
+  <div class="modal-root" id="banner-modal">
+    <div class="modal-scrim"></div>
+    <div class="modal-card">
+      <div class="modal-visual" id="modal-visual"></div>
+      <button class="modal-close" aria-label="Fechar">&times;</button>
+    </div>
   </div>
 
   <script>
@@ -37,18 +80,30 @@
     const tokenInput = document.getElementById("token");
     const statusEl = document.getElementById("status");
 
+    const bannerBtn = document.getElementById("send-banner");
+    const bannerInput = document.getElementById("banner");
+    const bannerStatus = document.getElementById("status-banner");
+    const bannerPreview = document.getElementById("banner-preview");
+    const modalRoot = document.getElementById("banner-modal");
+    const modalVisual = document.getElementById("modal-visual");
+    const modalClose = modalRoot.querySelector(".modal-close");
+    let currentBannerUrl = null;
+
+    function setStatus(el, message, type) {
+      el.textContent = message;
+      el.className = type ? `status ${type}` : "status";
+    }
+
     btn.addEventListener("click", async () => {
-      statusEl.textContent = "";
+      setStatus(statusEl, "", "");
       const file = fileInput.files[0];
       const token = tokenInput.value.trim();
       if (!file) {
-        statusEl.textContent = "Selecione um arquivo.";
-        statusEl.className = "status err";
+        setStatus(statusEl, "Selecione um arquivo.", "err");
         return;
       }
       if (!token) {
-        statusEl.textContent = "Informe o token.";
-        statusEl.className = "status err";
+        setStatus(statusEl, "Informe o token.", "err");
         return;
       }
       btn.disabled = true;
@@ -62,15 +117,101 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || "Falha no upload");
-        statusEl.textContent = `Salvo com sucesso (${data.saved} registros)`;
-        statusEl.className = "status ok";
+        setStatus(statusEl, `Salvo com sucesso (${data.saved} registros)`, "ok");
       } catch (err) {
-        statusEl.textContent = err.message || "Erro ao enviar";
-        statusEl.className = "status err";
+        setStatus(statusEl, err.message || "Erro ao enviar", "err");
       } finally {
         btn.disabled = false;
       }
     });
+
+    bannerBtn.addEventListener("click", async () => {
+      setStatus(bannerStatus, "", "");
+      const file = bannerInput.files[0];
+      const token = tokenInput.value.trim();
+      if (!file) {
+        setStatus(bannerStatus, "Selecione uma imagem.", "err");
+        return;
+      }
+      if (!token) {
+        setStatus(bannerStatus, "Informe o token.", "err");
+        return;
+      }
+      bannerBtn.disabled = true;
+      try {
+        const form = new FormData();
+        form.append("image", file);
+        const res = await fetch("/api/admin/birthdays/banner", {
+          method: "POST",
+          headers: { "x-admin-token": token },
+          body: form
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "Falha no upload");
+        const latest = (data.banners || [data])[0];
+        setStatus(bannerStatus, "Banner salvo com sucesso.", "ok");
+        renderPreview(latest?.url);
+      } catch (err) {
+        setStatus(bannerStatus, err.message || "Erro ao enviar", "err");
+      } finally {
+        bannerBtn.disabled = false;
+      }
+    });
+
+    function renderPreview(url) {
+      if (url) {
+        bannerPreview.innerHTML = `<img src="${url}" alt="Banner atual">`;
+        bannerPreview.dataset.hasImage = "true";
+        currentBannerUrl = url;
+      } else {
+        bannerPreview.textContent = "Nenhuma imagem salva";
+        bannerPreview.dataset.hasImage = "false";
+        currentBannerUrl = null;
+      }
+    }
+
+    async function loadBanner() {
+      try {
+        const res = await fetch("/api/birthdays/banner", { cache: "no-store" });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const latest = (data.banners || []).find(Boolean);
+        renderPreview(latest?.url || null);
+      } catch {
+        renderPreview(null);
+      }
+    }
+
+    function openModal() {
+      if (!currentBannerUrl) return;
+      modalVisual.innerHTML = `<img src="${currentBannerUrl}" alt="Banner full">`;
+      modalRoot.classList.add("active");
+      document.body.classList.add("modal-open");
+    }
+
+    function closeModal() {
+      modalRoot.classList.remove("active");
+      document.body.classList.remove("modal-open");
+      modalVisual.innerHTML = "";
+    }
+
+    bannerPreview.addEventListener("click", openModal);
+    modalClose.addEventListener("click", closeModal);
+    modalRoot.addEventListener("click", (e) => {
+      if (e.target === modalRoot || e.target.classList.contains("modal-scrim")) {
+        closeModal();
+      }
+    });
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "Escape" && modalRoot.classList.contains("active")) closeModal();
+    });
+
+    // carrega preview inicial ao abrir a página
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", loadBanner);
+    } else {
+      loadBanner();
+    }
   </script>
 </body>
 </html>
