@@ -515,33 +515,34 @@ body.modal-open {
   overflow: hidden;
 }
 
-.banner-nav {
+.banner-modal-nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(6, 18, 40, 0.35);
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(7, 12, 24, 0.6);
   color: #fff;
+  font-size: 18px;
+  cursor: pointer;
   display: none;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  cursor: pointer;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
   transition: all 0.2s ease;
+  z-index: 2;
 }
 
-.banner-nav:hover {
-  background: rgba(10, 28, 60, 0.55);
+.banner-modal-nav:hover {
+  background: rgba(12, 22, 45, 0.8);
 }
 
-.banner-nav-left {
+.banner-modal-nav-left {
   left: 10px;
 }
 
-.banner-nav-right {
+.banner-modal-nav-right {
   right: 10px;
 }

@@ -44,10 +44,7 @@
 
     <section class="main-grid">
       <div class="left-col">
-        <a class="banner" href="#" aria-label="Aviso de feriado">
-          <button class="banner-nav banner-nav-left" type="button" aria-label="Anterior" data-banner-prev>&#8249;</button>
-          <button class="banner-nav banner-nav-right" type="button" aria-label="Proximo" data-banner-next>&#8250;</button>
-        </a>
+        <a class="banner" href="#" aria-label="Aviso de feriado"></a>
 
         <div class="birthdays">
           <div class="birthdays-header">
@@ -80,7 +77,9 @@
   <div class="banner-modal-root" data-banner-modal>
     <div class="banner-modal-scrim" data-banner-modal-close></div>
     <div class="banner-modal-card">
+      <button class="banner-modal-nav banner-modal-nav-left" type="button" aria-label="Anterior" data-banner-modal-prev>&#8249;</button>
       <div class="banner-modal-visual" data-banner-modal-visual></div>
+      <button class="banner-modal-nav banner-modal-nav-right" type="button" aria-label="Próximo" data-banner-modal-next>&#8250;</button>
       <button class="banner-modal-close" type="button" aria-label="Fechar" data-banner-modal-close>&times;</button>
     </div>
   </div>
@@ -128,9 +127,13 @@
     const bannerModalCloseEls = document.querySelectorAll("[data-banner-modal-close]");
     const bannerPrev = document.querySelector("[data-banner-prev]");
     const bannerNext = document.querySelector("[data-banner-next]");
+    const modalPrev = document.querySelector("[data-banner-modal-prev]");
+    const modalNext = document.querySelector("[data-banner-modal-next]");
     let currentBannerUrl = null;
     let bannerList = [];
     let bannerIndex = 0;
+    let modalIndex = 0;
+    let autoOpened = false;
 
     async function fetchLinks() {
       try {
@@ -174,10 +177,10 @@
     }
 
     async function init() {
-    const [{ quickLinks, corporateSystems }, birthdays, bannerData] = await Promise.all([
-      fetchLinks(),
-      fetchBirthdays(),
-      fetchBanner()
+      const [{ quickLinks, corporateSystems }, birthdays, bannerData] = await Promise.all([
+        fetchLinks(),
+        fetchBirthdays(),
+        fetchBanner()
     ]);
     renderQuickLinks(quickLinks);
     renderCorporate(corporateSystems);
@@ -188,6 +191,12 @@
       const corporateIds = corporateSystems.map((i) => i.id);
       const health = await fetchHealth(corporateIds);
       applyStatus(corporateContainer.querySelectorAll("a"), health);
+
+      // abre comunicado automaticamente (banner mais recente), se existir
+      if (!autoOpened && bannerList.length) {
+        autoOpened = true;
+        openBannerModal();
+      }
     }
 
     async function fetchBirthdays() {
@@ -231,6 +240,7 @@
       if (!bannerEl) return;
       bannerList = Array.isArray(list) ? list : [];
       bannerIndex = 0;
+      modalIndex = 0;
       if (!bannerList.length) {
         bannerEl.style.backgroundImage = "";
         bannerEl.dataset.hasBanner = "false";
@@ -289,7 +299,8 @@
 
     function openBannerModal() {
       if (!currentBannerUrl || !bannerModal || !bannerModalVisual) return;
-      bannerModalVisual.innerHTML = `<img src="${currentBannerUrl}" alt="Banner em tela cheia">`;
+      modalIndex = 0;
+      setModalImage();
       bannerModal.classList.add("active");
       document.body.classList.add("modal-open");
     }
@@ -314,22 +325,31 @@
       const hasMany = bannerList.length > 1;
       if (bannerPrev) bannerPrev.style.display = hasMany ? "flex" : "none";
       if (bannerNext) bannerNext.style.display = hasMany ? "flex" : "none";
+      if (modalPrev) modalPrev.style.display = hasMany ? "grid" : "none";
+      if (modalNext) modalNext.style.display = hasMany ? "grid" : "none";
+    }
+
+    function setModalImage() {
+      if (!bannerModalVisual) return;
+      const item = bannerList[modalIndex];
+      const url = item?.url || null;
+      bannerModalVisual.innerHTML = url ? `<img src="${url}" alt="Banner em tela cheia">` : "";
     }
 
     function goPrev() {
       if (!bannerList.length) return;
-      bannerIndex = (bannerIndex - 1 + bannerList.length) % bannerList.length;
-      applyBannerBackground();
+      modalIndex = (modalIndex - 1 + bannerList.length) % bannerList.length;
+      setModalImage();
     }
 
     function goNext() {
       if (!bannerList.length) return;
-      bannerIndex = (bannerIndex + 1) % bannerList.length;
-      applyBannerBackground();
+      modalIndex = (modalIndex + 1) % bannerList.length;
+      setModalImage();
     }
 
-    if (bannerPrev) bannerPrev.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); goPrev(); });
-    if (bannerNext) bannerNext.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); goNext(); });
+    if (bannerPrev) bannerPrev.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); });
+    if (bannerNext) bannerNext.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); });
 
     bannerModalCloseEls.forEach((el) => {
       el.addEventListener("click", closeBannerModal);
@@ -348,6 +368,9 @@
         closeBannerModal();
       }
     });
+
+    if (modalPrev) modalPrev.addEventListener("click", (e) => { e.stopPropagation(); goPrev(); });
+    if (modalNext) modalNext.addEventListener("click", (e) => { e.stopPropagation(); goNext(); });
   </script>
 </body>
 </html>

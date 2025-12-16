@@ -28,6 +28,17 @@ let healthCache = new Map(); // id -> { status, ts }
 let cachedBirthdays = null;
 let cachedBanner = null;
 
+function bannerFileExists(filename) {
+  if (!filename) return false;
+  const filePath = path.join(BANNER_DIR, filename);
+  return fs.existsSync(filePath);
+}
+
+async function persistBanners(list) {
+  await fs.promises.mkdir(BANNER_DIR, { recursive: true });
+  await fs.promises.writeFile(BANNER_META_PATH, JSON.stringify(list, null, 2), "utf-8");
+}
+
 async function loadLinks() {
   if (cachedLinks) return cachedLinks;
   const raw = await readFile(new URL("./data/links.json", import.meta.url), "utf-8");
@@ -52,14 +63,18 @@ async function loadBanner() {
   try {
     const raw = await readFile(BANNER_META_PATH, "utf-8");
     const parsed = JSON.parse(raw);
+    let list = [];
     if (Array.isArray(parsed)) {
-      cachedBanner = parsed;
+      list = parsed;
     } else if (parsed && parsed.url) {
-      cachedBanner = [parsed];
-    } else {
-      cachedBanner = [];
+      list = [parsed];
     }
-    return cachedBanner;
+    const filtered = list.filter((item) => bannerFileExists(item?.filename));
+    if (filtered.length !== list.length) {
+      await persistBanners(filtered);
+    }
+    cachedBanner = filtered;
+    return filtered;
   } catch {
     cachedBanner = [];
     return [];
@@ -317,7 +332,7 @@ app.post("/api/admin/birthdays/banner", upload.single("image"), async (req, res)
     const toRemove = merged.slice(BANNER_MAX);
     await removeOldBanners(toRemove);
 
-    await fs.promises.writeFile(BANNER_META_PATH, JSON.stringify(toKeep, null, 2), "utf-8");
+    await persistBanners(toKeep);
     cachedBanner = toKeep;
 
     res.json({ url: publicUrl, banners: toKeep });
