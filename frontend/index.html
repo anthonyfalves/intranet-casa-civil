@@ -70,6 +70,20 @@
 
     <section class="corporate">
       <h2>Sistemas Corporativos</h2>
+      <div class="status-legend" role="note" aria-label="Legenda de status dos sistemas">
+        <span class="status-legend-item">
+          <span class="status-dot status-online" aria-hidden="true"></span>
+          Ativo
+        </span>
+        <span class="status-legend-item">
+          <span class="status-dot status-unstable" aria-hidden="true"></span>
+          Instável (lento)
+        </span>
+        <span class="status-legend-item">
+          <span class="status-dot status-offline" aria-hidden="true"></span>
+          Fora do ar
+        </span>
+      </div>
       <div class="corporate-grid" data-corporate-links></div>
     </section>
   </div>
@@ -99,7 +113,7 @@
         { id: "siga-doc", title: "Sistema SIGA-DOC", href: "https://www.sigadoc.mt.gov.br/", checkUrl: "https://www.sigadoc.mt.gov.br/favicon.ico" },
         { id: "fiplan", title: "FIPLAN", href: "https://www.fiplan.mt.gov.br/Fiplan.jsp", checkUrl: "https://www.fiplan.mt.gov.br/favicon.ico" },
         { id: "seap", title: "SEAP", href: "https://seapng.seplag.mt.gov.br/", checkUrl: "https://seapng.seplag.mt.gov.br/favicon.ico" },
-        { id: "sigpas", title: "SIGPAS", href: "https://sigpas.seplag.mt.gov.br", checkUrl: "https://sigpas.seplag.mt.gov.br/favicon.ico" },
+        { id: "sigpas", title: "SIGPAS", href: "https://atendimento.casacivil.mt.gov.br", checkUrl: "https://atendimento.casacivil.mt.gov.br" },
         { id: "compras-publicas", title: "Compras Publicas", href: "https://aquisicoes.seplag.mt.gov.br/auth/realms/az/protocol/openid-connect/auth?client_id=compras-preparacao-app&redirect_uri=https%3A%2F%2Faquisicoes.seplag.mt.gov.br%2Fcompras-preparacao%2F%23%2F&state=6b2f3dfe-08f7-4cd9-80f2-a598f59e9992&response_mode=fragment&response_type=code&scope=openid&nonce=9caa18d4-8a4e-4455-a86e-854945f3b036", checkUrl: "https://aquisicoes.seplag.mt.gov.br/auth/realms/az/protocol/openid-connect/auth?client_id=compras-preparacao-app&redirect_uri=https%3A%2F%2Faquisicoes.seplag.mt.gov.br%2Fcompras-preparacao%2F%23%2F&state=6b2f3dfe-08f7-4cd9-80f2-a598f59e9992&response_mode=fragment&response_type=code&scope=openid&nonce=9caa18d4-8a4e-4455-a86e-854945f3b036/favicon.ico" },
         { id: "portal-aquisicao", title: "Portal de Aquisições", href: "https://aquisicoes.seplag.mt.gov.br", checkUrl: "https://aquisicoes.seplag.mt.gov.br" }
       ]
@@ -168,10 +182,11 @@
       elements.forEach((el) => {
         const id = el.dataset.id;
         const status = data[id] || "offline";
-        el.classList.remove("status-online", "status-offline", "status-unknown");
+        el.classList.remove("status-online", "status-offline", "status-unstable", "status-unknown");
         el.classList.add(
           status === "online" ? "status-online" :
-          status === "offline" ? "status-offline" : "status-unknown"
+          status === "offline" ? "status-offline" :
+          status === "unstable" ? "status-unstable" : "status-unknown"
         );
       });
     }

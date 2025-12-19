@@ -331,6 +331,33 @@ a:hover {
   color: #111827;
 }
 
+.status-legend {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.status-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
 .corporate-grid {
   margin-top: 14px;
   display: grid;
@@ -406,10 +433,17 @@ a:hover {
   color: #ffffff !important;
 }
 
+.status-unstable {
+  background: #f59e0b;
+  border-color: #d97706;
+  color: #111827 !important;
+}
+
 /* aplica status também nos quick-cards */
 .quick-card.status-unknown,
 .quick-card.status-online,
-.quick-card.status-offline {
+.quick-card.status-offline,
+.quick-card.status-unstable {
   color: inherit;
 }
 
@@ -430,6 +464,12 @@ a:hover {
   background: #ef4444 !important;
   border-color: #d43636 !important;
   color: #ffffff !important;
+}
+
+.corporate-grid a.status-unstable {
+  background: #f59e0b !important;
+  border-color: #d97706 !important;
+  color: #111827 !important;
 }
 
 /* modal do banner */

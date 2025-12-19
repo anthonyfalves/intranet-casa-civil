@@ -85,6 +85,12 @@
       "title": "Portal de Aquisições",
       "href": "https://aquisicoes.seplag.mt.gov.br",
       "checkUrl": "https://aquisicoes.seplag.mt.gov.br"
+    },
+        {
+      "id": "tuiuiiu",
+      "title": "Sistema de Chamados TUIUIUI",
+      "href": "https://atendimento.casacivil.mt.gov.br",
+      "checkUrl": "https://atendimento.casacivil.mt.gov.br"
     }
   ]
 }

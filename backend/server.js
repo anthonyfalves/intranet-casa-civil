@@ -1,6 +1,7 @@
 import express from "express";
 import { readFile } from "fs/promises";
 import fs from "fs";
+import net from "net";
 import path from "path";
 import { fileURLToPath } from "url";
 import multer from "multer";
@@ -9,6 +10,7 @@ import xlsx from "xlsx";
 const app = express();
 const PORT = process.env.PORT || 3000;
 const HEALTH_TIMEOUT = 5000;
+const HEALTH_SLOW_MS = Number(process.env.HEALTH_SLOW_MS) || 2500;
 const HEALTH_CACHE_MS = 60_000; // 1 min de cache para aliviar carga
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "changeme";
 const UPLOAD_MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -27,6 +29,8 @@ let cachedLinks = null;
 let healthCache = new Map(); // id -> { status, ts }
 let cachedBirthdays = null;
 let cachedBanner = null;
+
+app.use(express.json({ limit: "1mb" }));
 
 function bannerFileExists(filename) {
   if (!filename) return false;
@@ -84,6 +88,7 @@ async function loadBanner() {
 async function fetchHealthUrl(url, timeout = HEALTH_TIMEOUT) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
+  const startedAt = Date.now();
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -95,14 +100,48 @@ async function fetchHealthUrl(url, timeout = HEALTH_TIMEOUT) {
       signal: controller.signal
     });
     // Considera online se resposta < 500 (inclui 3xx/4xx comuns como 403/401)
-    if (res.status < 500) return true;
-    return false;
-  } catch {
+    const ok = res.status < 500;
+    return { ok, ms: Date.now() - startedAt, timedOut: false };
+  } catch (err) {
     // Falha de rede/timeout = inconclusivo
-    return null;
+    const timedOut = err?.name === "AbortError";
+    return { ok: null, ms: Date.now() - startedAt, timedOut };
   } finally {
     clearTimeout(id);
   }
+}
+
+function tcpProbeUrl(url, timeout = HEALTH_TIMEOUT) {
+  return new Promise((resolve) => {
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch {
+      resolve({ ok: false, ms: 0 });
+      return;
+    }
+
+    const hostname = parsed.hostname;
+    const port = parsed.port
+      ? Number(parsed.port)
+      : parsed.protocol === "http:"
+        ? 80
+        : 443;
+
+    const startedAt = Date.now();
+    const socket = net.connect({ host: hostname, port });
+
+    const done = (ok) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve({ ok, ms: Date.now() - startedAt });
+    };
+
+    socket.setTimeout(timeout);
+    socket.once("connect", () => done(true));
+    socket.once("timeout", () => done(false));
+    socket.once("error", () => done(false));
+  });
 }
 
 async function checkTargets(targets) {
@@ -121,11 +160,25 @@ async function checkTargets(targets) {
       statuses[item.id] = cached.status;
       continue;
     }
-    let ok = await fetchHealthUrl(primary);
-    if (ok === false && fallback && fallback !== primary && fallback !== "#") {
-      ok = await fetchHealthUrl(fallback);
+    let result = await fetchHealthUrl(primary);
+    if ((result.ok === false || result.ok === null) && fallback && fallback !== primary && fallback !== "#") {
+      result = await fetchHealthUrl(fallback);
     }
-    const status = ok === true ? "online" : ok === false ? "offline" : "unknown";
+
+    if (result.ok === null && !result.timedOut) {
+      // fallback: alguns sites bloqueiam/derrubam requisições HTTP (TLS/bot), mas o host/porta pode estar ok
+      const probe = await tcpProbeUrl(primary);
+      if (probe.ok) {
+        result = { ok: true, ms: probe.ms, timedOut: false };
+      }
+    }
+
+    const status =
+      result.ok === true
+        ? result.ms > HEALTH_SLOW_MS
+          ? "unstable"
+          : "online"
+        : "offline";
     healthCache.set(item.id, { status, ts: now });
     statuses[item.id] = status;
   }
@@ -184,6 +237,15 @@ function authAdmin(req, res, next) {
     return res.status(401).json({ error: "unauthorized" });
   }
   next();
+}
+
+function isSafeBannerFilename(filename) {
+  if (!filename) return false;
+  const base = path.basename(String(filename));
+  if (base !== filename) return false;
+  const ext = (base.split(".").pop() || "").toLowerCase();
+  if (!ALLOWED_BANNER_EXT.includes(ext)) return false;
+  return /^banner-\d+\.[a-z0-9]+$/i.test(base);
 }
 
 function normalizeDate(value) {
@@ -278,8 +340,7 @@ async function removeOldBanners(listToRemove) {
   );
 }
 
-// Temporariamente sem token para facilitar teste; reative authAdmin depois
-app.post("/api/admin/birthdays/upload", upload.single("file"), async (req, res) => {
+app.post("/api/admin/birthdays/upload", authAdmin, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "file_required" });
     const ext = (req.file.originalname.split(".").pop() || "").toLowerCase();
@@ -311,7 +372,7 @@ app.post("/api/admin/birthdays/upload", upload.single("file"), async (req, res) 
   }
 });
 
-app.post("/api/admin/birthdays/banner", upload.single("image"), async (req, res) => {
+app.post("/api/admin/birthdays/banner", authAdmin, upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "file_required" });
     const ext = (req.file.originalname.split(".").pop() || "").toLowerCase();
@@ -338,6 +399,41 @@ app.post("/api/admin/birthdays/banner", upload.single("image"), async (req, res)
     res.json({ url: publicUrl, banners: toKeep });
   } catch (err) {
     res.status(500).json({ error: "banner_upload_failed", details: err?.message });
+  }
+});
+
+app.get("/api/admin/birthdays/banners", authAdmin, async (_req, res) => {
+  try {
+    const list = await loadBanner();
+    res.json({ banners: list || [] });
+  } catch (err) {
+    res.status(500).json({ error: "banner_list_failed", details: err?.message });
+  }
+});
+
+app.post("/api/admin/birthdays/banners/delete", authAdmin, async (req, res) => {
+  try {
+    const filenames = req.body?.filenames;
+    if (!Array.isArray(filenames) || !filenames.length) {
+      return res.status(400).json({ error: "filenames_required" });
+    }
+
+    const requested = [...new Set(filenames.map((f) => String(f)))].filter(isSafeBannerFilename);
+    if (!requested.length) {
+      return res.status(400).json({ error: "no_valid_filenames" });
+    }
+
+    const previous = await loadBanner();
+    const toRemove = previous.filter((item) => requested.includes(item.filename));
+    const toKeep = previous.filter((item) => !requested.includes(item.filename));
+
+    await removeOldBanners(toRemove);
+    await persistBanners(toKeep);
+    cachedBanner = toKeep;
+
+    res.json({ removed: toRemove.map((i) => i.filename), banners: toKeep });
+  } catch (err) {
+    res.status(500).json({ error: "banner_delete_failed", details: err?.message });
   }
 });
 

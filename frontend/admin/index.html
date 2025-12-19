@@ -22,6 +22,18 @@
     .preview { margin-top: 10px; border: 1px dashed #d1d5db; background: #f8fafc; border-radius: 10px; min-height: 120px; display: grid; place-items: center; color: #6b7280; font-size: 14px; overflow: hidden; padding: 6px; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
     .preview:hover { border-color: #0f6fff; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08); }
     .preview img { width: 100%; display: block; border-radius: 8px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+    .btn-secondary { background: #eef2fb; color: #111827; border: 1px solid #dbe2ff; }
+    .btn-danger { background: #dc2626; }
+    .btn-danger:disabled { background: #fca5a5; }
+    .banner-list { margin-top: 12px; display: grid; gap: 10px; }
+    .banner-item { display: grid; grid-template-columns: 18px 64px 1fr; gap: 10px; align-items: center; padding: 10px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; }
+    .banner-item:hover { border-color: #c7d6ff; box-shadow: 0 10px 25px rgba(15,23,42,0.06); }
+    .banner-thumb { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; background: #f3f4f6; border: 1px solid #e5e7eb; display: grid; place-items: center; }
+    .banner-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .banner-meta { min-width: 0; }
+    .banner-meta strong { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .banner-meta small { display: block; margin-top: 2px; color: #6b7280; font-size: 12px; }
     /* Modal */
     .modal-root { position: fixed; inset: 0; display: none; place-items: center; z-index: 999; }
     .modal-root.active { display: grid; }
@@ -64,6 +76,19 @@
       <div class="preview" id="banner-preview">Nenhuma imagem salva</div>
       <div class="status" id="status-banner"></div>
     </div>
+
+    <div class="card">
+      <h2>Gerenciar imagens do banner</h2>
+      <p class="muted">Selecione as imagens que deseja excluir para não acumular arquivos no servidor.</p>
+      <div class="actions">
+        <button class="btn-secondary" id="banners-refresh" type="button">Atualizar lista</button>
+        <button class="btn-secondary" id="banners-select-all" type="button">Selecionar tudo</button>
+        <button class="btn-secondary" id="banners-select-none" type="button">Limpar seleção</button>
+        <button class="btn-danger" id="banners-delete" type="button" disabled>Excluir selecionadas</button>
+      </div>
+      <div class="banner-list" id="banner-list"></div>
+      <div class="status" id="status-banners"></div>
+    </div>
   </div>
 
   <div class="modal-root" id="banner-modal">
@@ -89,9 +114,38 @@
     const modalClose = modalRoot.querySelector(".modal-close");
     let currentBannerUrl = null;
 
+    const bannersRefreshBtn = document.getElementById("banners-refresh");
+    const bannersSelectAllBtn = document.getElementById("banners-select-all");
+    const bannersSelectNoneBtn = document.getElementById("banners-select-none");
+    const bannersDeleteBtn = document.getElementById("banners-delete");
+    const bannersListEl = document.getElementById("banner-list");
+    const bannersStatusEl = document.getElementById("status-banners");
+
+    const TOKEN_STORAGE_KEY = "intranet_admin_token";
+    tokenInput.value = localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+
     function setStatus(el, message, type) {
       el.textContent = message;
       el.className = type ? `status ${type}` : "status";
+    }
+
+    function getToken() {
+      return tokenInput.value.trim();
+    }
+
+    function persistToken() {
+      localStorage.setItem(TOKEN_STORAGE_KEY, tokenInput.value);
+    }
+
+    function getSelectedFilenames() {
+      const checked = [...bannersListEl.querySelectorAll('input[type="checkbox"][data-filename]:checked')];
+      return checked.map((el) => el.dataset.filename).filter(Boolean);
+    }
+
+    function updateDeleteButton() {
+      const selected = getSelectedFilenames();
+      bannersDeleteBtn.disabled = selected.length === 0;
+      bannersDeleteBtn.textContent = selected.length ? `Excluir selecionadas (${selected.length})` : "Excluir selecionadas";
     }
 
     btn.addEventListener("click", async () => {
@@ -151,6 +205,7 @@
         const latest = (data.banners || [data])[0];
         setStatus(bannerStatus, "Banner salvo com sucesso.", "ok");
         renderPreview(latest?.url);
+        await loadAdminBanners();
       } catch (err) {
         setStatus(bannerStatus, err.message || "Erro ao enviar", "err");
       } finally {
@@ -182,6 +237,95 @@
       }
     }
 
+    function renderAdminBanners(list) {
+      bannersListEl.innerHTML = "";
+      if (!Array.isArray(list) || !list.length) {
+        bannersListEl.innerHTML = '<div class="muted">Nenhuma imagem encontrada.</div>';
+        updateDeleteButton();
+        return;
+      }
+
+      list.forEach((item) => {
+        const filename = item?.filename || "";
+        const url = item?.url || "";
+        const uploadedAt = item?.uploadedAt ? new Date(item.uploadedAt).toLocaleString("pt-BR") : "";
+
+        const row = document.createElement("label");
+        row.className = "banner-item";
+        row.innerHTML = `
+          <input type="checkbox" data-filename="${filename}">
+          <span class="banner-thumb">${url ? `<img src="${url}" alt="Banner ${filename}">` : ""}</span>
+          <span class="banner-meta">
+            <strong title="${filename}">${filename || "(sem nome)"}</strong>
+            <small>${uploadedAt ? `Enviado em: ${uploadedAt}` : ""}</small>
+          </span>
+        `;
+        row.querySelector('input[type="checkbox"]').addEventListener("change", updateDeleteButton);
+        bannersListEl.appendChild(row);
+      });
+
+      updateDeleteButton();
+    }
+
+    async function loadAdminBanners() {
+      setStatus(bannersStatusEl, "", "");
+      const token = getToken();
+      if (!token) {
+        renderAdminBanners([]);
+        setStatus(bannersStatusEl, "Informe o token para carregar e gerenciar as imagens.", "");
+        return;
+      }
+      try {
+        bannersRefreshBtn.disabled = true;
+        const res = await fetch("/api/admin/birthdays/banners", {
+          headers: { "x-admin-token": token },
+          cache: "no-store"
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || "Falha ao carregar lista");
+        renderAdminBanners(data.banners || []);
+      } catch (err) {
+        renderAdminBanners([]);
+        setStatus(bannersStatusEl, err.message || "Erro ao carregar lista", "err");
+      } finally {
+        bannersRefreshBtn.disabled = false;
+      }
+    }
+
+    async function deleteSelectedBanners() {
+      setStatus(bannersStatusEl, "", "");
+      const token = getToken();
+      const selected = getSelectedFilenames();
+      if (!token) {
+        setStatus(bannersStatusEl, "Informe o token.", "err");
+        return;
+      }
+      if (!selected.length) return;
+      const confirmed = confirm(`Excluir ${selected.length} imagem(ns) selecionada(s)?`);
+      if (!confirmed) return;
+
+      bannersDeleteBtn.disabled = true;
+      try {
+        const res = await fetch("/api/admin/birthdays/banners/delete", {
+          method: "POST",
+          headers: {
+            "x-admin-token": token,
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({ filenames: selected })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || "Falha ao excluir");
+        setStatus(bannersStatusEl, `Excluídas: ${(data.removed || []).length}`, "ok");
+        await loadAdminBanners();
+        await loadBanner();
+      } catch (err) {
+        setStatus(bannersStatusEl, err.message || "Erro ao excluir", "err");
+      } finally {
+        updateDeleteButton();
+      }
+    }
+
     function openModal() {
       if (!currentBannerUrl) return;
       modalVisual.innerHTML = `<img src="${currentBannerUrl}" alt="Banner full">`;
@@ -208,10 +352,38 @@
 
     // carrega preview inicial ao abrir a página
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", loadBanner);
+      document.addEventListener("DOMContentLoaded", () => {
+        loadBanner();
+        if (getToken()) loadAdminBanners();
+      });
     } else {
       loadBanner();
+      if (getToken()) loadAdminBanners();
     }
+
+    bannersRefreshBtn.addEventListener("click", loadAdminBanners);
+    bannersSelectAllBtn.addEventListener("click", () => {
+      bannersListEl.querySelectorAll('input[type="checkbox"][data-filename]').forEach((el) => (el.checked = true));
+      updateDeleteButton();
+    });
+    bannersSelectNoneBtn.addEventListener("click", () => {
+      bannersListEl.querySelectorAll('input[type="checkbox"][data-filename]').forEach((el) => (el.checked = false));
+      updateDeleteButton();
+    });
+    bannersDeleteBtn.addEventListener("click", deleteSelectedBanners);
+
+    let tokenDebounceId = null;
+    tokenInput.addEventListener("input", () => {
+      persistToken();
+      if (tokenDebounceId) clearTimeout(tokenDebounceId);
+      tokenDebounceId = setTimeout(() => {
+        if (getToken()) loadAdminBanners();
+        else {
+          renderAdminBanners([]);
+          setStatus(bannersStatusEl, "Informe o token para carregar e gerenciar as imagens.", "");
+        }
+      }, 250);
+    });
   </script>
 </body>
 </html>
