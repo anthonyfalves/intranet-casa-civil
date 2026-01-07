@@ -148,6 +148,7 @@
     let bannerIndex = 0;
     let modalIndex = 0;
     let autoOpened = false;
+    const HEALTH_REFRESH_MS = 60_000;
 
     async function fetchLinks() {
       try {
@@ -191,6 +192,11 @@
       });
     }
 
+    async function updateHealth(corporateIds) {
+      const health = await fetchHealth(corporateIds);
+      applyStatus(corporateContainer.querySelectorAll("a"), health);
+    }
+
     async function init() {
       const [{ quickLinks, corporateSystems }, birthdays, bannerData] = await Promise.all([
         fetchLinks(),
@@ -204,8 +210,8 @@
 
       // health check somente para Sistemas Corporativos
       const corporateIds = corporateSystems.map((i) => i.id);
-      const health = await fetchHealth(corporateIds);
-      applyStatus(corporateContainer.querySelectorAll("a"), health);
+      await updateHealth(corporateIds);
+      setInterval(() => updateHealth(corporateIds), HEALTH_REFRESH_MS);
 
       // abre comunicado automaticamente (banner mais recente), se existir
       if (!autoOpened && bannerList.length) {

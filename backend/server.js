@@ -9,8 +9,8 @@ import xlsx from "xlsx";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const HEALTH_TIMEOUT = 5000;
-const HEALTH_SLOW_MS = Number(process.env.HEALTH_SLOW_MS) || 2500;
+const HEALTH_TIMEOUT = 4000;
+const HEALTH_SLOW_MS = Number(process.env.HEALTH_SLOW_MS) || 1500;
 const HEALTH_CACHE_MS = 60_000; // 1 min de cache para aliviar carga
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "changeme";
 const UPLOAD_MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -26,7 +26,7 @@ const ALLOWED_BANNER_EXT = ["png", "jpg", "jpeg", "gif", "webp"];
 const BANNER_MAX = 10;
 
 let cachedLinks = null;
-let healthCache = new Map(); // id -> { status, ts }
+let healthCache = new Map(); // id -> { status, ts, details }
 let cachedBirthdays = null;
 let cachedBanner = null;
 
@@ -85,7 +85,34 @@ async function loadBanner() {
   }
 }
 
-async function fetchHealthUrl(url, timeout = HEALTH_TIMEOUT) {
+function shouldUseOrigin(parsed) {
+  const path = (parsed.pathname || "").toLowerCase();
+  const hasOidcPath = path.includes("/openid-connect/auth") || path.includes("/protocol/openid-connect/auth");
+  const hasLoginParams = ["state", "nonce", "code"].some((key) => parsed.searchParams.has(key));
+  return hasOidcPath || hasLoginParams;
+}
+
+function buildCheckUrl(rawUrl) {
+  if (!rawUrl) return null;
+  try {
+    const parsed = new URL(String(rawUrl));
+    // URLs de login/OIDC costumam redirecionar e falhar; reduzimos ao origin.
+    if (shouldUseOrigin(parsed)) return `${parsed.origin}/`;
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return null;
+  }
+}
+
+function median(values) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2) return sorted[mid];
+  return (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+async function oneTry(url, timeout = HEALTH_TIMEOUT) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   const startedAt = Date.now();
@@ -101,14 +128,38 @@ async function fetchHealthUrl(url, timeout = HEALTH_TIMEOUT) {
     });
     // Considera online se resposta < 500 (inclui 3xx/4xx comuns como 403/401)
     const ok = res.status < 500;
-    return { ok, ms: Date.now() - startedAt, timedOut: false };
-  } catch (err) {
-    // Falha de rede/timeout = inconclusivo
-    const timedOut = err?.name === "AbortError";
-    return { ok: null, ms: Date.now() - startedAt, timedOut };
+    return { ok, ms: Date.now() - startedAt };
+  } catch {
+    return { ok: false, ms: Date.now() - startedAt };
   } finally {
     clearTimeout(id);
   }
+}
+
+async function fetchHealthUrl(url) {
+  // Faz 3 tentativas para detectar instabilidade intermitente.
+  const results = [];
+  for (let i = 0; i < 3; i += 1) {
+    results.push(await oneTry(url));
+  }
+
+  const success = results.filter((item) => item.ok).length;
+  const latencies = results.filter((item) => item.ok).map((item) => item.ms);
+  const medianMs = median(latencies);
+
+  let status = "down";
+  if (success === 3) {
+    status = medianMs !== null && medianMs >= HEALTH_SLOW_MS ? "unstable" : "up";
+  } else if (success > 0) {
+    status = "unstable";
+  }
+
+  return {
+    status,
+    attempts: 3,
+    success,
+    medianMs
+  };
 }
 
 function tcpProbeUrl(url, timeout = HEALTH_TIMEOUT) {
@@ -147,40 +198,45 @@ function tcpProbeUrl(url, timeout = HEALTH_TIMEOUT) {
 async function checkTargets(targets) {
   const now = Date.now();
   const statuses = {};
+  const details = {};
   for (const item of targets) {
-    const primary = item.checkUrl || item.href;
-    const fallback = item.href;
+    const primary =
+      item.checkUrl && String(item.checkUrl).trim()
+        ? item.checkUrl
+        : item.href;
+    const normalizedUrl = buildCheckUrl(primary);
 
-    if (!primary || primary === "#") {
+    if (!normalizedUrl || primary === "#") {
       statuses[item.id] = "unknown";
       continue;
     }
     const cached = healthCache.get(item.id);
     if (cached && now - cached.ts < HEALTH_CACHE_MS) {
       statuses[item.id] = cached.status;
+      if (cached.details) details[item.id] = cached.details;
       continue;
     }
-    let result = await fetchHealthUrl(primary);
-    if ((result.ok === false || result.ok === null) && fallback && fallback !== primary && fallback !== "#") {
-      result = await fetchHealthUrl(fallback);
-    }
-
-    if (result.ok === null && !result.timedOut) {
-      // fallback: alguns sites bloqueiam/derrubam requisições HTTP (TLS/bot), mas o host/porta pode estar ok
-      const probe = await tcpProbeUrl(primary);
+    let result = await fetchHealthUrl(normalizedUrl);
+    if (result.success === 0) {
+      const probe = await tcpProbeUrl(normalizedUrl);
       if (probe.ok) {
-        result = { ok: true, ms: probe.ms, timedOut: false };
+        result = { ...result, status: "unstable", tcpOk: true, tcpMs: probe.ms };
+      } else {
+        result = { ...result, tcpOk: false, tcpMs: probe.ms };
       }
     }
-
     const status =
-      result.ok === true
-        ? result.ms > HEALTH_SLOW_MS
-          ? "unstable"
-          : "online"
-        : "offline";
-    healthCache.set(item.id, { status, ts: now });
+      result.status === "up"
+        ? "online"
+        : result.status === "down"
+          ? "offline"
+          : "unstable";
+    healthCache.set(item.id, { status, ts: now, details: result });
     statuses[item.id] = status;
+    details[item.id] = result;
+  }
+  if (Object.keys(details).length) {
+    statuses._details = details;
   }
   return statuses;
 }
