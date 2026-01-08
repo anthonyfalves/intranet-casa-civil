@@ -35,6 +35,9 @@ a:hover {
   max-width: 1300px;
   margin: 28px auto 64px;
   padding: 0 32px 48px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .top-bar {
@@ -390,7 +393,7 @@ a:hover {
 }
 
 .site-footer {
-  margin-top: 28px;
+  margin-top: auto;
   padding-top: 14px;
   border-top: 1px solid var(--border);
   color: var(--muted);
