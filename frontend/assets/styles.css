@@ -512,6 +512,7 @@ a:hover {
   background: linear-gradient(145deg, rgba(12, 27, 59, 0.92), rgba(18, 47, 94, 0.96));
   display: grid;
   place-items: center;
+  z-index: 1;
 }
 
 .banner-modal-visual::after {
@@ -545,6 +546,7 @@ a:hover {
   display: grid;
   place-items: center;
   transition: all 0.2s ease;
+  z-index: 3;
 }
 
 .banner-modal-close:hover {
