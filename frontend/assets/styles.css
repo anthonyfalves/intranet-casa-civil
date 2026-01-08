@@ -389,6 +389,24 @@ a:hover {
   color: var(--accent);
 }
 
+.site-footer {
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.site-footer a {
+  color: inherit;
+  font-weight: 600;
+}
+
+.site-footer a:hover {
+  color: var(--accent);
+}
+
 @media (max-width: 960px) {
   .page {
     padding: 0 18px 32px;
