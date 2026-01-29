@@ -51,9 +51,9 @@
           <div class="birthdays-header">
             <h3>Aniversariantes</h3>
             <div class="month-nav">
-              <button type="button" aria-label="Mes anterior">&#8249;</button>
-              <span>dezembro</span>
-              <button type="button" aria-label="Proximo mes">&#8250;</button>
+              <button type="button" aria-label="Mes anterior" data-month-prev>&#8249;</button>
+              <span data-month-label>dezembro</span>
+              <button type="button" aria-label="Proximo mes" data-month-next>&#8250;</button>
             </div>
           </div>
           <ul data-birthdays></ul>
@@ -141,6 +141,9 @@
     const quickLinksContainer = document.querySelector("[data-quick-links]");
     const corporateContainer = document.querySelector("[data-corporate-links]");
     const birthdaysList = document.querySelector("[data-birthdays]");
+    const monthLabel = document.querySelector("[data-month-label]");
+    const monthPrev = document.querySelector("[data-month-prev]");
+    const monthNext = document.querySelector("[data-month-next]");
     const bannerEl = document.querySelector(".banner");
     const bannerModal = document.querySelector("[data-banner-modal]");
     const bannerModalVisual = document.querySelector("[data-banner-modal-visual]");
@@ -154,7 +157,23 @@
     let bannerIndex = 0;
     let modalIndex = 0;
     let autoOpened = false;
+    let allBirthdays = [];
+    let currentMonthIndex = new Date().getMonth();
     const HEALTH_REFRESH_MS = 60_000;
+    const MONTH_NAMES = [
+      "janeiro",
+      "fevereiro",
+      "marco",
+      "abril",
+      "maio",
+      "junho",
+      "julho",
+      "agosto",
+      "setembro",
+      "outubro",
+      "novembro",
+      "dezembro"
+    ];
 
     async function fetchLinks() {
       try {
@@ -211,7 +230,9 @@
     ]);
     renderQuickLinks(quickLinks);
     renderCorporate(corporateSystems);
-    renderBirthdays(birthdays);
+    allBirthdays = Array.isArray(birthdays) ? birthdays : [];
+    currentMonthIndex = pickInitialMonth(currentMonthIndex);
+    updateMonthView();
     renderBanner(bannerData.banners || []);
 
       // health check somente para Sistemas Corporativos
@@ -306,6 +327,58 @@
       });
     }
 
+    function getMonthIndexFromDate(value) {
+      const parts = String(value || "").split("/");
+      if (parts.length < 2) return null;
+      const month = Number.parseInt(parts[1], 10);
+      if (!Number.isFinite(month) || month < 1 || month > 12) return null;
+      return month - 1;
+    }
+
+    function getDayFromDate(value) {
+      const parts = String(value || "").split("/");
+      if (!parts.length) return null;
+      const day = Number.parseInt(parts[0], 10);
+      if (!Number.isFinite(day) || day < 1 || day > 31) return null;
+      return day;
+    }
+
+    function monthHasBirthdays(monthIndex) {
+      return allBirthdays.some((person) => getMonthIndexFromDate(person?.date) === monthIndex);
+    }
+
+    function pickInitialMonth(defaultIndex) {
+      if (monthHasBirthdays(defaultIndex)) return defaultIndex;
+      for (let offset = 1; offset < 12; offset += 1) {
+        const idx = (defaultIndex + offset) % 12;
+        if (monthHasBirthdays(idx)) return idx;
+      }
+      return defaultIndex;
+    }
+
+    function filterBirthdaysByMonth(monthIndex) {
+      return allBirthdays.filter((person) => getMonthIndexFromDate(person?.date) === monthIndex);
+    }
+
+    function sortBirthdays(list) {
+      return [...list].sort((a, b) => {
+        const dayA = getDayFromDate(a?.date) ?? 0;
+        const dayB = getDayFromDate(b?.date) ?? 0;
+        if (dayA !== dayB) return dayA - dayB;
+        const nameA = String(a?.name || "");
+        const nameB = String(b?.name || "");
+        return nameA.localeCompare(nameB, "pt-BR");
+      });
+    }
+
+    function updateMonthView() {
+      if (monthLabel) {
+        monthLabel.textContent = MONTH_NAMES[currentMonthIndex] || "";
+      }
+      const filtered = filterBirthdaysByMonth(currentMonthIndex);
+      renderBirthdays(sortBirthdays(filtered));
+    }
+
     function renderCorporate(data) {
       data.forEach((item) => {
         const link = document.createElement("a");
@@ -345,6 +418,20 @@
           e.preventDefault();
           openBannerModal();
         }
+      });
+    }
+
+    if (monthPrev) {
+      monthPrev.addEventListener("click", () => {
+        currentMonthIndex = (currentMonthIndex + 11) % 12;
+        updateMonthView();
+      });
+    }
+
+    if (monthNext) {
+      monthNext.addEventListener("click", () => {
+        currentMonthIndex = (currentMonthIndex + 1) % 12;
+        updateMonthView();
       });
     }
 
